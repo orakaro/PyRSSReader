@@ -1,0 +1,27 @@
+<!doctype html>
+{% extends "base.html" %}
+
+{% block metanav %}
+  <a href="{{ url_for('users.logout') }}">Logout</a>
+{% endblock %}
+
+
+{% block content %}
+<table class="table table-hover">
+
+  {% for name,link in feeds.iteritems()%}
+  <tr>
+    <td>Feed Name</td>
+    <td>{{name}}</td>
+  </tr>
+  <tr>
+    <td>Feed link</td>
+    <td>{{link}}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<br>
+<br>
+
+{% endblock %}

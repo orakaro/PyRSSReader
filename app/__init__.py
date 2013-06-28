@@ -32,6 +32,9 @@ app.register_blueprint(facebookModule)
 from app.users.views import mod as usersModule
 app.register_blueprint(usersModule)
 
+from app.feed.views import mod as feedModule 
+app.register_blueprint(feedModule)
+
 # Later on you'll import the other blueprints the same way:
 #from app.comments.views import mod as commentsModule
 #from app.posts.views import mod as postsModule
