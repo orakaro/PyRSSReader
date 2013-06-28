@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+  {% from "forms/macros.html" import render_field %}
+  <form class="form-horizontal" method="POST" action="." class="form">
+    <fieldset>
+      <legend>Registration</legend>
+      <br>
+      <br>
+      {{ form.csrf_token }}
+      {{ render_field(form.name, class="input-xlarge") }}
+      {{ render_field(form.email, class="input-xlarge") }}
+      {{ render_field(form.password, class="input-xlarge") }}
+      {{ render_field(form.confirm, class="input-xlarge") }}
+      {{ render_field(form.gender) }}
+      <div class = "in_line">
+        {{ render_field(form.accept_tos, class="input checkbox") }}
+      </div>
+      <div class = "recaptcha">
+        {{ form.recaptcha }}
+      </div>
+      <br>
+      <br>
+      <div class="control-group">
+        <label class="control-label"></label>
+        <div class="controls">
+          <button id = "register_button" type=submit class="btn btn-success">Register My Account</button>
+        </div>
+      </div>
+   </fieldset>
+  </form>
+{% endblock %}
+
+{% block metanav%}
+  <a href="{{ url_for('users.login') }}">Login</a>
+{% endblock %}

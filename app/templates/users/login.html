@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+  {% from "forms/macros.html" import render_field %}
+  <form class="form-horizontal" method="POST" action="." class="form">
+    <fieldset>
+      <br>
+      <br>
+      {{ form.csrf_token }}
+      {{ render_field(form.email, class="input-xlarge") }}
+      {{ render_field(form.password, class="input-xlarge") }}
+      <div class="control-group">
+        <label class="control-label"></label>
+        <div class="controls">
+          <button type=submit class="btn btn-inverse">Login</button>
+        </div>
+      </div>
+    </fieldset>
+  </form>
+{% endblock %}
+
+{% block metanav%}
+  <a href="{{ url_for('users.register') }}">Register</a>
+{% endblock %}

@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <title>{% block title %}vunhatminh world most handsome guy{% endblock %}</title>
+    {% block css %}
+    <link rel="stylesheet" href="/static/css/Bootstrap/docs/assets/css/bootstrap.css" />
+    <link rel="stylesheet" href="/static/css/Bootstrap/docs/assets/css/bootstrap-responsive.css" />
+    <link rel="stylesheet" href="/static/css/mystyle.css" />
+    {% endblock %}
+    {% block script %}
+    <script type=text/javascript src="/static/css/Bootstrap/docs/assets/js/bootstrap.min.js""></script>
+    {% endblock %}
+  </head>
+  <body>
+    <div class=page>
+      <div id="header">{% block header %}
+        <h2>Welcome to vunhatminh.com </h2>
+      {% endblock %}</div>
+      <div class=metanav>{% block metanav%}{% endblock %}</div>
+      <div id="messages-wrap">
+        <div id="messages">
+          {% for category, msg in get_flashed_messages(with_categories=true) %}
+            <div class=flash>{{ msg }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div id="content">{% block content %}{% endblock%}</div>
+      <div id="footer">{% block footer %}{% endblock%}</div>
+    </div>
+  </body>
+</html>

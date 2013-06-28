@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+  {% from "forms/macros.html" import render_field %}
+  <form class="form-horizontal" method="POST" action="." class="form">
+    <fieldset>
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th style="width: 18%"></th>
+            <th style="width: 82%"></th>
+          </tr>
+        </thead>
+        {% for t in twitter%}
+        <tr class="info">
+          <td style="vertical-align: initial">Twitter ID</td>
+          {% if api %}
+          <td style="vertical-align: initial">
+            <img src="{{api.me().profile_image_url}}">
+            {{t.getTwitterID()}} 
+            &nbsp;&nbsp;&nbsp;
+            "{{api.me().status.text}}" 
+          </td>
+          {% else %}
+          <td style="vertical-align: initial">{{t.getTwitterID()}}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </table>
+      <br>
+      <br>
+      {{ form.csrf_token }}
+      {{ render_field(form.twitter_id, class="input-xlarge") }}
+      <div class="control-group">
+        <label class="control-label"></label>
+        <div class="controls">
+          <button id = "register_button" type=submit class="btn btn-success">Just memo</button>
+        </div>
+     </div>
+   </fieldset>
+  </form>
+
+  <br>
+  <div class="control-group">
+    <label class="control-label"></label>
+    <div class="controls">
+      <a href="{{ oauth }}"><button id = "oauth_button" class="btn btn-primary">Sign in with Twitter Account</button></a>
+    </div>
+  </div>
+
+
+{% endblock %}
+
+{% block metanav%}
+  <a href="{{ url_for('users.home') }}">Profile</a>  
+  &nbsp;&nbsp;&nbsp; 
+  <a href="{{ url_for('users.logout') }}">Logout</a>
+{% endblock %}
