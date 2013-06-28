@@ -3,7 +3,7 @@ font-family: 'Comic Sans';
 background: #eee; 
 }
 
-h1, h2{
+h1, h2, h3{
 color: #996600;
 font-family: Geneva;
 }
@@ -67,3 +67,9 @@ vertical-align: initial;
 #oauth_button{
 margin-left: 180px;
 }
+
+.modal-header #subModalLabel{
+color: #996600;
+font-family: Geneva;
+}
+

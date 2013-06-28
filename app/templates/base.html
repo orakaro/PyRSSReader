@@ -1,19 +1,20 @@
 <html>
   <head>
-    <title>{% block title %}vunhatminh world most handsome guy{% endblock %}</title>
+    <title>{% block title %}PyRSSReader{% endblock %}</title>
     {% block css %}
     <link rel="stylesheet" href="/static/css/Bootstrap/docs/assets/css/bootstrap.css" />
     <link rel="stylesheet" href="/static/css/Bootstrap/docs/assets/css/bootstrap-responsive.css" />
     <link rel="stylesheet" href="/static/css/mystyle.css" />
     {% endblock %}
     {% block script %}
+    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.min.js"></script>
     <script type=text/javascript src="/static/css/Bootstrap/docs/assets/js/bootstrap.min.js""></script>
     {% endblock %}
   </head>
   <body>
     <div class=page>
       <div id="header">{% block header %}
-        <h2>Welcome to vunhatminh.com </h2>
+        <h2>PyRSSReader - a lightweight RSS Reader </h2>
       {% endblock %}</div>
       <div class=metanav>{% block metanav%}{% endblock %}</div>
       <div id="messages-wrap">

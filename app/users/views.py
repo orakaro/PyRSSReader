@@ -30,7 +30,7 @@ def login():
     if user and check_password_hash(user.password, form.password.data):
       session['user_id'] = user.id
       flash('Welcome %s' % user.name)
-      return redirect(url_for('users.home'))
+      return redirect(url_for('feed.home'))
     flash('Wrong email or password', 'error-message')
   return render_template("users/login.html", form=form)
 
@@ -50,7 +50,7 @@ def register():
     session['user_id'] = user.id
 
     flash('Thanks for registering')
-    return redirect(url_for('users.home'))
+    return redirect(url_for('feed.home'))
   return render_template("users/register.html", form=form)
 
 

@@ -2,6 +2,8 @@
 {% extends "base.html" %}
 
 {% block metanav %}
+  <a href="{{ url_for('feed.home') }}">Feed Home</a>
+  &nbsp; 
   <a href="{{ url_for('users.logout') }}">Logout</a>
 {% endblock %}
 

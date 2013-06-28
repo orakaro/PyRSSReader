@@ -9,6 +9,10 @@ class Feed(db.Model):
 
     def __init__(self, name=None, link=None):
       self.name = name 
+      self.link = link 
+
+    def getId(self):
+      return self.id
 
     def getLink(self):
       return self.link
@@ -27,8 +31,9 @@ class FeedUser(db.Model):
     fid = db.Column(db.Integer, db.ForeignKey('feed.id'))
     uid = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, name=None, link=None):
-      self.name = name 
+    def __init__(self, fid=None, uid=None):
+      self.fid = fid 
+      self.uid = uid
 
     def getFeed(self):
       return self.fid

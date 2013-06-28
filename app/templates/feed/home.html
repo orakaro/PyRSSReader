@@ -2,24 +2,59 @@
 {% extends "base.html" %}
 
 {% block metanav %}
+  <a href="{{ url_for('users.home') }}">Profile</a>
+  &nbsp; 
   <a href="{{ url_for('users.logout') }}">Logout</a>
 {% endblock %}
 
 
 {% block content %}
-<table class="table table-hover">
+{% from "forms/macros.html" import render_field %}
+<br>
+<br>
+<br>
+ 
+<!-- Modal -->
+<div id="subcribeModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="subModalLabel" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
+    <h3 id="subModalLabel">Subribe a RSS </h3>
+  </div>
+  <form class="form-horizontal" method="POST" action="." class="form">
+  <div class="modal-body">
+  <br>
+  <br>
+    <fieldset>
+      {{ form.csrf_token }}
+      {{ render_field(form.link, class="input-xlarge") }}
+   </fieldset>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+    <button type="submit" class="btn btn-success">Save RSS</button>
+  </div>
+  </form>
+</div>
 
-  {% for name,link in feeds.iteritems()%}
+<div class="row-fluid">
+<!-- Button to trigger modal -->
+<div id="subcribe" class="span3" style="text-align:center">
+<button class="btn btn-warning btn-large" data-toggle="modal" data-target="#subcribeModal" >Subcribe</button>
+</div>
+<div id="feed_table" class="span8">
+<table class="table table-hover">
+  {% for name,headline in feeds.iteritems()%}
   <tr>
     <td>Feed Name</td>
-    <td>{{name}}</td>
+    <td>{{name}} ({{headline["number"]}})</td>
   </tr>
   <tr>
-    <td>Feed link</td>
-    <td>{{link}}</td>
+    <td>Feed head</td>
+    <td>{{headline["head"]}}</td>
   </tr>
   {% endfor %}
 </table>
+</div>
 
 <br>
 <br>

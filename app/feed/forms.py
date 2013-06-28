@@ -1,5 +1,5 @@
-from flask.ext.wtf import Form, SelectField, TextField, PasswordField, BooleanField, RecaptchaField
-from flask.ext.wtf import Required, Email, EqualTo
+from flask.ext.wtf import Form, TextField 
+from flask.ext.wtf import Required, EqualTo
 
 class RegisterForm(Form):
-  facebook_id = TextField('Facebook ID', [Required()])
+  link = TextField('RSS link', [Required()])
