@@ -20,7 +20,7 @@ def load_user():
 
 @app.route('/')
 def portal():
-  flash('Welcome to vunhatminh.com')
+  flash('Welcome to RSSR')
   return redirect(url_for('users.login'))
 
 from app.twitter.views import mod as twitterModule 
