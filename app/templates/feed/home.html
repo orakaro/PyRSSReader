@@ -15,12 +15,12 @@
 <br>
  
 <!-- Modal -->
+<form class="form-horizontal" method="POST" action="." class="form">
 <div id="subcribeModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="subModalLabel" aria-hidden="true">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
     <h3 id="subModalLabel">Subribe a RSS </h3>
   </div>
-  <form class="form-horizontal" method="POST" action="." class="form">
   <div class="modal-body">
   <br>
   <br>
@@ -31,10 +31,10 @@
   </div>
   <div class="modal-footer">
     <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
-    <button type="submit" class="btn btn-success">Save RSS</button>
+    <button type="submit" class="btn btn-warning">Save RSS</button>
   </div>
-  </form>
 </div>
+</form>
 
 <div class="row-fluid">
 <!-- Button to trigger modal -->
@@ -42,21 +42,22 @@
 <button class="btn btn-warning btn-large" data-toggle="modal" data-target="#subcribeModal" >Subcribe</button>
 </div>
 <div id="feed_table" class="span8">
-<table class="table table-hover">
   {% for name,headline in feeds.iteritems()%}
-  <tr>
-    <td>Feed Name</td>
-    <td>{{name}} ({{headline["number"]}})</td>
-  </tr>
-  <tr>
-    <td>Feed head</td>
-    <td>{{headline["head"]}}</td>
-  </tr>
+  <div class="hero-unit">
+    <div class="media">
+      <div class="media-body">
+        <h4 class="headline">
+        <a href="{{headline["href"]}}"> {{name}} ({{headline["number"]}})</a>
+        </h4>
+        <h4 class= "title">{{headline["head"]}}</h5>
+        {{headline["description"].encode('utf-8')}}
+      </div>
+    </div>
+  </div>
   {% endfor %}
-</table>
+  <br>
+  <br>
 </div>
 
-<br>
-<br>
 
 {% endblock %}

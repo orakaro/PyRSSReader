@@ -5,6 +5,7 @@ class RSSParser(object):
     name = '' 
     number = 0
     head = ''
+    description = ''
     href = ''
     # feedparser object
     dto = None
@@ -14,7 +15,8 @@ class RSSParser(object):
       self.name = d.feed.title
       self.number = len(d.entries)
       self.head = d.entries[0].title
-      self.href = link 
+      self.description = d.entries[0].description
+      self.href = d.feed.link
       self.dto = d
 
     def getName(self):
@@ -25,6 +27,9 @@ class RSSParser(object):
   
     def getHead(self):
       return self.head 
+  
+    def getDescription(self):
+      return self.description
   
     def getHref(self):
       return self.href

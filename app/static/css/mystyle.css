@@ -65,7 +65,6 @@ vertical-align: initial;
 }
 
 #oauth_button{
-margin-left: 180px;
 }
 
 .modal-header #subModalLabel{
@@ -73,3 +72,15 @@ color: #996600;
 font-family: Geneva;
 }
 
+.headline{
+color: #996600;
+font-family: Geneva;
+}
+
+.title{
+font-family: Geneva;
+}
+
+#oauth_span{
+text-align: center;
+}

@@ -54,7 +54,15 @@ def createHeadline(link):
   """
   Use RSSParser to get detail 
   """
+  rel={}
   rssParser = RSSParser(link)
-  return {"number":rssParser.getNumber(), "head":rssParser.getHead()}
-
+  description = rssParser.getDescription()
+  # Hacker News special link
+  if link == "https://news.ycombinator.com/rss":
+    description = rssParser.getDTO().entries[0].link
+  rel["number"]=rssParser.getNumber()
+  rel["href"]=rssParser.getHref()
+  rel["head"]=rssParser.getHead()
+  rel["description"]=description
+  return rel
 

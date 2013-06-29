@@ -28,27 +28,20 @@
         {% endfor %}
         {% endif %}
       </table>
-      <br>
-      <br>
-      {{ form.csrf_token }}
-      {{ render_field(form.facebook_id, class="input-xlarge") }}
-      <div class="control-group">
-        <label class="control-label"></label>
-        <div class="controls">
-          <button id = "register_button" type=submit class="btn btn-success">Just memo</button>
-        </div>
-      </div>
    </fieldset>
   </form>
 
   <br>
   <div class="control-group">
     <label class="control-label"></label>
-    <div class="controls">
-      <a href="{{ url_for('facebook.authen') }}"><button id = "oauth_button" class="btn btn-primary">Sign in with Facebook Account</button></a>
+    <div class="span9" id="oauth_span">
+      <a href="{{ url_for('facebook.authen') }}"><button id = "oauth_button" class="btn btn-primary btn-large">Sign in with Facebook Account</button></a>
     </div>
   </div>
 
+  <br>
+  <br>
+  <br>
 {% endblock %}
 
 {% block metanav%}
