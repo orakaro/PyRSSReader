@@ -63,6 +63,25 @@
   <!-- Subcribe button -->
   <div id="subcribe" class="span3" style="text-align:center">
     <button class="btn btn-custom-lighten btn-large" data-toggle="modal" data-target="#subcribeModal" >Subcribe</button>
+    <div class="left-menu span7 offset2">
+      <br>
+      <br>
+      <br>
+      <br>
+      <ul class="nav nav-list bs-docs-sidenav">
+        <li class="menu-item"><a href="{{ url_for('feed.home') }}"><i class="icon-home"></i> Home</a></li>
+        <li class="menu-item"><a href="#"><i class="icon-share"></i> Share</a></li>
+        <li class="menu-item"><a href="#"><i class="icon-star"></i> Star</a></li>
+        {% for name,headline in feeds.iteritems()%}
+        <li class="menu-item"><a href="{{ url_for('feed.detail', feedName=name, feedLink=headline["link"] )}}"> {{name}} ({{headline["number"]}})</a></li>
+
+        {% endfor %}
+      </ul>
+      <br>
+      <br>
+      <br>
+      <br>
+    </div>
   </div>
 
   <!-- Feed Table-->
@@ -78,10 +97,11 @@
             <!-- Title + Number -->
             <a href="{{headline["href"]}}" target="_blank"> {{name}} ({{headline["number"]}})</a>
             </h4>
+          <br>
           <!-- Head -->
           <a href="{{ url_for('feed.detail', feedName=name, feedLink=headline["link"] )}}"><p class= "title">{{headline["head"]}}</p></a>
           <!-- Summary-->
-          {{headline["description"].encode('utf-8')}}
+          {% include 'tmp/sum_'+headline["entryLink"][7:].replace('/','_') ignore missing %}
         </div>
       </div>
     </div>

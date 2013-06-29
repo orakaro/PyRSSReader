@@ -96,6 +96,18 @@ font-family: Geneva;
 display: none;
 }
 
+a.menu-tree{
+font-size: 1.5em;
+}
+
+.left-menu > .nav-list > .active > a{
+background-color: #e05f00;
+}
+
+li.menu-item{
+text-align: left;
+}
+
 /* custom bootstrap button */
 .btn-custom-lighten.active {
   color: rgba(255, 255, 255, 0.75);

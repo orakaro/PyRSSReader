@@ -51,7 +51,7 @@ def insertFeed(link):
   Insert feed into DB 
   """
   rssParser = RSSParser(link)
-  feed = Feed(rssParser.getName(), rssParser.getHref())
+  feed = Feed(rssParser.getName(), link)
   db.session.add(feed)
   db.session.commit()
   justAdd = Feed.query.filter_by(link=link).first() 
@@ -79,15 +79,18 @@ def createHeadline(link):
   """
   rel={}
   rssParser = RSSParser(link)
-  description = rssParser.getDescription()
-  # Hacker News special link
-  if link == "https://news.ycombinator.com/rss":
-    description = rssParser.getDTO().entries[0].link
-  rel["number"]=rssParser.getNumber()
-  rel["href"]=rssParser.getHref()
-  rel["head"]=rssParser.getHead()
-  rel["description"]=description
-  rel["link"]=link
+  # Save summary
+  for entry in rssParser.getDTO().entries:
+    f = open('app/templates/tmp/sum_'+entry.link[7:].replace('/','_'),'w')
+    summary = entry.summary.encode('utf-8') 
+    f.write(summary)
+    f.close()
+
+  rel["number"] = rssParser.getNumber()
+  rel["href"] = rssParser.getHref()
+  rel["head"] = rssParser.getHead()
+  rel["entryLink"] = rssParser.getEntryLink()
+  rel["link"] = link
   return rel
 
 def createEntriesAry(link):
@@ -97,10 +100,15 @@ def createEntriesAry(link):
   rel = {}
   rssParser = RSSParser(link)
   rel = rssParser.getDTO().entries 
-  # Write content to sepetare file for later include
+  # Write summary and content to sepetare file for later include
   for entry in rel:
     f = open('app/templates/tmp/'+entry.link[7:].replace('/','_'),'w')
-    f.write(entry.content[0].value.encode('utf-8'))
+    # Content or Description(summary)
+    try:
+      content = entry.content[0].value.encode('utf-8')
+    except:
+      content = entry.description.encode('utf-8') 
+    f.write(content)
     f.close()
   return rel 
 
