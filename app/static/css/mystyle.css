@@ -4,7 +4,7 @@ background: #eee;
 }
 
 h1, h2, h3{
-color: #996600;
+color: #e05f00;
 font-family: Geneva;
 }
 
@@ -18,10 +18,9 @@ background: white;
 
 .metanav{
 text-align:right;
-font-size: 0.8em;
+font-size: 1.2em;
 padding: 0.3em;
 margin-bottom: 1em;
-background: #fafafa; 
 }
 
 .flash{
@@ -83,4 +82,53 @@ font-family: Geneva;
 
 #oauth_span{
 text-align: center;
+}
+
+.unsubcribe{
+text-align: center;
+}
+
+#unsubcribe_confirm{
+font-family: Geneva;
+}
+
+#hidden-feedName{
+display: none;
+}
+
+/* custom bootstrap button */
+.btn-custom-lighten.active {
+  color: rgba(255, 255, 255, 0.75);
+}
+.btn-custom-lighten {
+  color: #ffffff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+  background-color: #e05f00;
+  background-image: -moz-linear-gradient(top, #cc5600, #ff6c00);
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#cc5600), to(#ff6c00));
+  background-image: -webkit-linear-gradient(top, #cc5600, #ff6c00);
+  background-image: -o-linear-gradient(top, #cc5600, #ff6c00);
+  background-image: linear-gradient(to bottom, #cc5600, #ff6c00);
+  background-repeat: repeat-x;
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffcc5600', endColorstr='#ffff6c00', GradientType=0);
+  border-color: #ff6c00 #ff6c00 #b34b00;
+  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  *background-color: #ff6c00;
+  /* Darken IE7 buttons by default so they stand out more given they won't have borders */
+
+  filter: progid:DXImageTransform.Microsoft.gradient(enabled = false);
+}
+.btn-custom-lighten:hover,
+.btn-custom-lighten:focus,
+.btn-custom-lighten:active,
+.btn-custom-lighten.active,
+.btn-custom-lighten.disabled,
+.btn-custom-lighten[disabled] {
+  color: #ffffff;
+  background-color: #ff6c00;
+  *background-color: #e66100;
+}
+.btn-custom-lighten:active,
+.btn-custom-lighten.active {
+  background-color: #cc5600 ;
 }

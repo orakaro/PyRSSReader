@@ -1,0 +1,85 @@
+<!doctype html>
+{% extends "base.html" %}
+
+{% block metanav %}
+  <a href="{{ url_for('feed.home') }}">Feed Home</a>
+  &nbsp; 
+  <a href="{{ url_for('users.home') }}">Profile</a>
+  &nbsp; 
+  <a href="{{ url_for('users.logout') }}">Logout</a>
+{% endblock %}
+
+
+{% block content %}
+{% from "forms/macros.html" import render_field %}
+<br>
+<br>
+<br>
+<!-- Modal -->
+<form class="form-horizontal" method="POST" action="." class="form">
+  <div id="subcribeModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="subModalLabel" aria-hidden="true">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
+      <h3 id="subModalLabel">Subribe a RSS </h3>
+    </div>
+    <div class="modal-body">
+      <br>
+      <br>
+      <fieldset>
+        {{ form.csrf_token }}
+        {{ render_field(form.link, class="input-xlarge") }}
+      </fieldset>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+      <button type="submit" class="btn btn-warning">Save RSS</button>
+    </div>
+  </div>
+</form>
+
+
+<div class="row-fluid">
+  <!-- Subcribe button -->
+  <div id="subcribe" class="span3" style="text-align:center">
+    <button class="btn btn-warning btn-large" data-toggle="modal" data-target="#subcribeModal" >Subcribe</button>
+  </div>
+  <!-- Entries Array -->
+  <div id="entries_array" class="span8">
+    {% for entry in entriesAry %}
+    <div class="hero-unit">
+      <div class="media">
+        <div class="media-body">
+          <h4 class="headline">
+            <!-- Title -->
+            <a href="{{entry.link}}">{{entry.title}}</a>
+          </h4>
+          <!-- Author + Published date -->
+          <p>by {{entry.author}} at {{entry.published}}</p>
+
+          <!-- Summary or Detail here -->
+
+          <ul class="nav nav-tabs" id="contentSwitch">
+            <li class="active"><a href="#summary_{{entriesAry.index(entry)}}" data-toggle="tab">Summary</a></li>
+            <li><a href="#full_content_{{entriesAry.index(entry)}}" data-toggle="tab">Content</a></li>
+          </ul>
+       
+          <div class="tab-content">
+            <div class="tab-pane fade active in" id="summary_{{entriesAry.index(entry)}}">
+              {{entry.summary}}
+            </div>
+            <div class="tab-pane fade in" id="full_content_{{entriesAry.index(entry)}}">
+              {% include 'tmp/'+entry.link[7:].replace('/','_') ignore missing %}
+            </div>
+          </div> 
+            
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <br>
+    <br>
+  </div>
+</div>
+  
+
+{% endblock %}

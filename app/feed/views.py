@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, flash, g, session, redirect, url_for
 
 from app import db
-from app.feed.forms import RegisterForm
+from app.feed.forms import RegisterForm, DeleteForm
 from app.rss_reader.parser import RSSParser
 from app.users.models import User
 from app.feed.models import Feed, FeedUser
@@ -10,17 +10,40 @@ from app.users.decorators import requires_login
 mod = Blueprint('feed', __name__, url_prefix='/feed')
 
 @requires_login
+@mod.route('/detail/<feedName>', methods=['GET', 'POST'])
+def detail(feedName = None):
+  """
+  Display the RSS Reader Detail 
+  """
+  link = request.args.get('feedLink',None)
+  entriesAry = createEntriesAry(link) 
+
+  form = RegisterForm(request.form)
+  if form.validate_on_submit():
+    insertFeed(form.link.data)
+  return render_template("feed/detail.html", form=form, entriesAry=entriesAry)
+ 
+
+@requires_login
 @mod.route('/home/', methods=['GET', 'POST'])
 def home():
   """
   Display the RSS Reader Home
   """
 
-  form = RegisterForm(request.form)
-  if form.validate_on_submit():
-    insertFeed(form.link.data)
+  rform = RegisterForm(request.form)
+  dform = DeleteForm(request.form)
+
+  # Unsubcribe a RSS link
+  if dform.validate_on_submit():
+    deleteFeed(dform.feedName.data)
+
+  # Subcribe a RSS link
+  if rform.validate_on_submit():
+    insertFeed(rform.link.data)
   g.feeds = createFeedList(g.user.id) 
-  return render_template("feed/home.html", form=form, feeds=g.feeds)
+
+  return render_template("feed/home.html", rform = rform, dform = dform ,feeds = g.feeds)
 
 
 def insertFeed(link):
@@ -52,7 +75,7 @@ def createFeedList(uid):
 
 def createHeadline(link):
   """
-  Use RSSParser to get detail 
+  Use RSSParser to get HeadLine 
   """
   rel={}
   rssParser = RSSParser(link)
@@ -64,5 +87,30 @@ def createHeadline(link):
   rel["href"]=rssParser.getHref()
   rel["head"]=rssParser.getHead()
   rel["description"]=description
+  rel["link"]=link
   return rel
+
+def createEntriesAry(link):
+  """
+  Use RSSParser to get detail 
+  """
+  rel = {}
+  rssParser = RSSParser(link)
+  rel = rssParser.getDTO().entries 
+  # Write content to sepetare file for later include
+  for entry in rel:
+    f = open('app/templates/tmp/'+entry.link[7:].replace('/','_'),'w')
+    f.write(entry.content[0].value.encode('utf-8'))
+    f.close()
+  return rel 
+
+def deleteFeed(feedName):
+  """
+  Delete feed into DB 
+  """
+  # Find target feed but not delete, just delete relation between feed and user in feedUser
+  targetFeed = Feed.query.filter_by(name = feedName).first() 
+  deleteFeedUser = FeedUser.query.filter_by(fid = targetFeed.getId(), uid = g.user.id).first()
+  db.session.delete(deleteFeedUser)
+  db.session.commit()
 
