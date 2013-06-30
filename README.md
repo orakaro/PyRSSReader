@@ -1,4 +1,5 @@
 ## Setup heroku
+```
 wget http://ftp.ruby-lang.org/pub/ruby/1.8/ruby-1.8.7-p302.tar.gz
 tar -zxvf ruby-1.8.7-p302.tar.gz
 cd ruby-1.8.7-p302
@@ -16,6 +17,7 @@ ruby setup.rb install
 ruby -v
 gem -v
 
+```
 
 ##Sync with github and heroku
 .git/config
