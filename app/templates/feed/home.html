@@ -72,9 +72,9 @@
         <li class="menu-item"><a href="{{ url_for('feed.home') }}"><i class="icon-home"></i> Home</a></li>
         <li class="menu-item"><a href="{{ url_for('feed.starred') }}"><i class="icon-star"></i> Star</a></li>
         <li class="menu-item"><a href="{{ url_for('feed.explore') }}"><i class="icon-th"></i> Explore</a></li>
+        <br>
         {% for name,headline in feeds.iteritems()%}
         <li class="menu-item"><a href="{{ url_for('feed.detail', feedName=name, feedLink=headline["link"] )}}"> {{name}} ({{headline["number"]}})</a></li>
-
         {% endfor %}
       </ul>
       <br>
