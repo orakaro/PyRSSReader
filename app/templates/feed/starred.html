@@ -82,7 +82,7 @@
             <ul class="nav nav-tabs" id="contentSwitch">
               <li class="active"><a href="#summary_{{starredEntries.keys().index(feedName)}}_{{entries.index(entry)}}" data-toggle="tab">Summary</a></li>
               <li><a href="#full_content_{{starredEntries.keys().index(feedName)}}_{{entries.index(entry)}}" data-toggle="tab">Content</a></li>
-              <li><a href="{{ url_for('feed.starred', entryId=entry.id, feedLink=entry.summary_detail.base, action='del')}}"><i class="icon-star "></i></a></li>
+              <li><a href="{{ url_for('feed.starred', entryId=entry.id, feedLink=entry.summary_detail.base, action='del')}}" rel="star" data-placement="right" data-toggle="tooltip" data-original-title="Unstar this entry"><i class="icon-star "></i></a></li>
             </ul>
          
             <div class="tab-content">
