@@ -1,0 +1,116 @@
+<p>
+Consider this code:
+</p>
+<pre>
+<i>// Code in italics is wrong
+   foregroundThreadId = ::GetWindowThreadProcessId(::GetForegroundWindow(), 0); 
+   myThreadId = GetCurrentThreadId(); 
+ 
+   if (foregroundThreadId != myThreadId) 
+   { 
+       AttachThreadInput(foregroundThreadId, myThreadId, TRUE); 
+       BringWindowToTop(myWindowHandle);</i>
+</pre>
+<p>
+If you try to step over the
+<code>Attach&shy;Thread&shy;Input</code>
+call in the debugger,
+both the debugger and the application being debugged will freeze.
+Why is that?
+</p>
+<p>
+This should look familiar because
+it's basically
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2008/08/01/8795860.aspx">
+the same code that I warned you about several years ago</a>.
+The code grabs the current foreground window and attaches
+its input state to the current thread.
+Now you're in trouble.
+</p>
+<p>
+Remember dual-signature bank accounts?
+These were bank accounts that required the signatures of both
+account holders in order to make a withdrawal.
+It can work out fine
+if the two parties trust each other with a shared bank account
+and can coordinate their actions so that when one of them needs money,
+it can go to the other and say,
+"Hey, can you sign this withdrawal slip?
+I need some money."
+(Another use case for dual-signature bank accounts was a parent
+wanting to monitor their child's spending.)
+</p>
+<p>
+<code>Attach&shy;Thread&shy;Input</code>
+tells the window manager,
+"Please take these two threads and put all their money
+in a dual-signature bank account."
+</p>
+<p>
+In the case above, the code said,
+"See that <i>random person being served by the bank teller</i>?
+Please take all my money and all his money and
+put them into a dual-signature bank account."
+</p>
+<p>
+As you can imagine, this is a bad idea,
+both for you and for the other person.
+You cannot withdraw any money until you can somehow
+track down that random person and get him to sign the withdrawal form.
+And it's not like you have any relationship with that
+person&mdash;you don't even know his name!&mdash;so the only chance
+you have is to go down to the bank and hang out there hoping that
+the other guy will show up to make a withdrawal as part of his normal
+course of business,
+and then you can say,
+"Hey, you there!
+Sign this for me, will ya?"
+</p>
+<p>
+The other person is in a similar predicament.
+When he goes to the bank to make a withdrawal, the teller will say,
+"I'm sorry, sir, but your money is in a dual-signature account,
+and your withdrawal slip has only one signature on it."
+He's stuck doing the same thing that you do:
+Whenever he wants to withdraw money, he has to go to the bank
+and hang around hoping that you will show up eventually.
+</p>
+<table border="0">
+<tr>
+    <td align="right">bank account</td>
+    <td>&harr;</td>
+    <td>input queue<td>
+</tr>
+<tr>
+    <td align="right">money</td>
+    <td>&harr;</td>
+    <td>input<td>
+</tr>
+<tr>
+    <td align="right">go to the bank</td>
+    <td>&harr;</td>
+    <td>check the message queue<td>
+</tr>
+</table>
+<p>
+In this case,
+what happened was that the code grabbed the debugger and said,
+"Okay, we now have a dual-signature bank account!"
+And now you're stuck.
+The debugger cannot withdraw any money
+because it is waiting for you to go to the bank.
+But you can't go to the bank because you're broken into the debugger.
+Result: Nobody gets any money.
+</p>
+<p>
+This is why you shouldn't grab random people in the bank and unilaterally
+create dual-signature bank accounts with them.
+</p>
+<p>
+<b>Reminder</b>:
+Attaching input queues is not a Get Out of Jail Free card.
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/06/07/10424279.aspx">
+It's a
+<i>Get Into the Same Jail</i> card</a>.
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10426841" width="1" />

@@ -1,0 +1,102 @@
+<p>
+As I noted earlier in the series,
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/06/04/10423296.aspx">
+attaching input queues puts you back into the
+world of co&ouml;perative multitasking</a>,
+where the two attached threads need to work together to get anything done.
+</p>
+<p>
+Back in the old 16-bit days,
+when input was synchronous,
+there was only one active window,
+only one focus window,
+only one window with capture,
+only one caret,
+only one cursor show count,
+only one keyboard state,
+only one input state.
+Furthermore, if you called
+<code>Set&shy;Focus</code>,
+you had to wait until the previous focus
+window responded to the
+<code>WM_KILL&shy;FOCUS</code> message
+before your
+<code>Set&shy;Focus</code> call returned.
+</p>
+<p>
+With asynchronous input,
+these sorts of operations are now local to your input queue.
+If you call
+<code>Set&shy;Focus</code>,
+then that steals focus only from other windows which belong
+to your input queue.
+Windows which belong to other input queues are unaffected.
+(Conversely, you can set focus only to windows which belong
+to your input queue,
+since those are the only windows your input queue has access to.)
+</p>
+<p>
+This is probably not very exciting,
+until you look at the one thing that can reach across
+input queues: The foreground window.
+</p>
+<p>
+The concept of the foreground window was introduced when
+input was desynchronized in order to express the
+"really global active window",
+as opposed to <code>Set&shy;Active&shy;Window</code>,
+which continued to refer to the local active window.
+It's something that was originally intended to be used
+only in emergencies
+since it violates the isolation of input queues,
+but as we learned before,
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2008/10/06/8969399.aspx">
+eventually nothing is special any more</a>,
+and what used to be the special function for stepping outside the box
+has become the function you use every day for getting things done.
+</p>
+<p>
+What most people don't realize is that
+<code>Set&shy;Foreground&shy;Window</code>
+is still subject to the rules on synchronous input.
+If you call
+<code>Set&shy;Foreground&shy;Window</code>,
+and the previous foreground window also belongs to your input queue,
+then your call to
+<code>Set&shy;Foreground&shy;Window</code>
+will wait until the previous foreground window
+processes its
+<code>WM_ACTIVATE(WA_INACTIVE)</code> message.
+</p>
+<p>
+A lot of people use <code>Attach&shy;Thread&shy;Input</code>
+thinking that it's a Get Out of Jail Free card,
+letting them manipulate windows of other programs and bypass
+the normal rules for focus and activation.
+But in fact it's a <i>Get Into the Same Jail</i> card,
+because you tied your thread's fate to that other thread.
+If that thread has stopped responding to messages,
+then your thread will also stop responding to messages,
+since you are sharing the same input queue
+and operations within an input queue are synchronous.
+</p>
+<p>
+<b>Bonus reminder</b>:
+If two windows are related by a parent/child relationship
+or owner/owned relationship, then their input queues
+are automatically attached.
+For example, if you do a <code>Set&shy;Parent</code> where
+the parent and child are in different threads,
+you have just synchronized the two threads.
+This sort of cross-thread relationship is
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/04/12/10410454.aspx">
+technically legal</a>,
+but
+it is very difficult to manage correctly,
+so it should be avoided unless you really know what you're doing.
+And if you are doing cross-thread or cross-process between
+windows that were not designed to participate in cross-thread
+or cross-process parenting,
+you are almost certainly doomed.
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10424279" width="1" />

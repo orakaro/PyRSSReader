@@ -45,3 +45,29 @@ class FeedUser(db.Model):
         return '<FeedUser %r>' % (self.id)
 
 
+class Star(db.Model):
+
+    __tablename__ = 'star'
+    id = db.Column(db.Integer, primary_key=True)
+    uid = db.Column(db.Integer, db.ForeignKey('user.id'))
+    fid = db.Column(db.Integer, db.ForeignKey('feed.id'))
+    entryid = db.Column(db.String(200))
+
+    def __init__(self, uid=None, fid=None, entryid=None):
+      self.uid = uid
+      self.fid = fid 
+      self.entryid = entryid
+
+    def getUser(self):
+      return self.uid
+
+    def getFeed(self):
+      return self.fid
+
+    def getEntryId(self):
+      return self.entryid
+
+    def __repr__(self):
+        return '<Star %r>' % (self.id)
+
+

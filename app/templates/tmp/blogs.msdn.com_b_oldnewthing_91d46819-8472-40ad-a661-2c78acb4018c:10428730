@@ -1,0 +1,62 @@
+<p>
+A customer put the following code at the start of their program:
+</p>
+<pre>
+// If this assertion fires, then somebody else changed the error mode
+// and I just overwrote it with my error mode.
+ASSERT(SetErrorMode(SEM_FAILCRITICALERRORS) == 0);
+</pre>
+<p>
+The customer wanted to know whether it was a valid assumption
+that the initial error mode for a process is zero.
+</p>
+<p>
+No it is not, and this is called out in the documentation for
+<a href="http://msdn.microsoft.com/library/ms680621">
+<code>Set&shy;Error&shy;Mode</code></a>:
+</p>
+<blockquote class="q">
+<p>
+<b>Remarks</b>
+</p>
+<p>
+Each process has an associated error mode that indicates
+to the system how the application is going to respond to serious errors.
+<font color="red">
+A child process inherits the error mode of its parent process.</font>
+</p>
+</blockquote>
+<p>
+The assumption that the initial error mode is zero is therefore false.
+</p>
+<p>
+There's another error in the above code:
+The call to
+<code>Set&shy;Error&shy;Mode</code> is placed inside an assertion.
+This means that in the retail build, the call <i>disappears</i>.
+The debug build has the error mode set to
+<code>SEM_FAIL&shy;CRITICAL&shy;ERRORS</code>,
+but the retail build has the default error mode.
+They are
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2006/08/15/701130.aspx">
+changing the semantics in the debug build</a>,
+and are headed down the slippery slope that leads to them being forced
+to deploy the debug version of the program into production
+because that's the only build that works.
+</p>
+<p>
+Unfortunately, they may have already reached that point,
+because the customer asked,
+"Is it possible for the user to set the default error
+code to something other than zero,
+in which case this assertion <u>would crash the client</u>?"
+(Emphasis mine.)
+</p>
+<p>
+<b>Bonus chatter</b>:
+Note that you can override error mode inheritance
+by passing the
+<code>CREATE_DEFAULT_ERROR_MODE</code>
+flag to the <code>Create&shy;Process</code> function.
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10428730" width="1" />

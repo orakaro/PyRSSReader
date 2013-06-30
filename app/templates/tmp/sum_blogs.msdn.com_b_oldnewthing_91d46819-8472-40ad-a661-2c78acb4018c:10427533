@@ -1,0 +1,320 @@
+<p>
+For motivational purposes, let's start with
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/05/13/10417964.aspx">
+a program that displays a DWM thumbnail</a>.
+</p>
+<p>
+Start with
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2003/07/23/54576.aspx">
+the scratch program</a>
+and add the following:
+</p>
+<pre>
+<font color="blue">#include &lt;dwmapi.h&gt;
+
+HWND g_hwndThumbnail;
+HTHUMBNAIL g_hthumb;
+
+void UpdateThumbnail(HWND hwndFrame, HWND hwndTarget)
+{
+ if (g_hwndThumbnail != hwndTarget) {
+  g_hwndThumbnail = hwndTarget;
+  if (g_hthumb != nullptr) {
+   DwmUnregisterThumbnail(g_hthumb);
+   g_hthumb = nullptr;
+  }
+
+  if (hwndTarget != nullptr) {
+   RECT rcClient;
+   GetClientRect(hwndFrame, &amp;rcClient);
+   if (SUCCEEDED(DwmRegisterThumbnail(hwndFrame,
+                         g_hwndThumbnail, &amp;g_hthumb))) {
+    DWM_THUMBNAIL_PROPERTIES props = {};
+    props.dwFlags = DWM_TNP_RECTDESTINATION | DWM_TNP_VISIBLE;
+    props.rcDestination = rcClient;
+    props.rcDestination.top += 50;
+    props.fVisible = TRUE;
+    DwmUpdateThumbnailProperties(g_hthumb, &amp;props);
+   }
+  }
+ }
+}</font>
+</pre>
+<p>
+The <code>Update&shy;Thumbnail</code>
+function positions a thumbnail of the target window
+inside the frame window.
+There's a small optimization in the case that the
+target window is the same one that the thumbnail
+is already viewing.
+Overall, no big deal.
+</p>
+<pre>
+void
+OnDestroy(HWND hwnd)
+{
+ <font color="blue">UpdateThumbnail(hwnd, nullptr);</font>
+ PostQuitMessage(0);
+}
+</pre>
+<p>
+When our window is destroyed, we need to clean up the thumbnail,
+which we do by updating it to a null pointer.
+</p>
+<p>
+For the purpose of illustration,
+let's say that pressing the <kbd>1</kbd> key changes
+the thumbnail to a randomly-selected window.
+</p>
+<pre>
+<font color="blue">struct RANDOMWINDOWINFO
+{
+ HWND hwnd;
+ int cWindows;
+};
+
+BOOL CALLBACK RandomEnumProc(HWND hwnd, LPARAM lParam)
+{
+ if (hwnd != g_hwndThumbnail &amp;&amp;
+     IsWindowVisible(hwnd) &amp;&amp;
+     (GetWindowStyle(hwnd) &amp; WS_CAPTION) == WS_CAPTION) {
+  auto prwi = reinterpret_cast&lt;RANDOMWINDOWINFO *&gt;(lParam);
+  prwi-&gt;cWindows++;
+  if (rand() % prwi->cWindows == 0) {
+   prwi->hwnd = hwnd;
+  }
+ }
+ return TRUE;
+}
+
+void ChooseRandomWindow(HWND hwndFrame)
+{
+ RANDOMWINDOWINFO rwi = {};
+ EnumWindows(RandomEnumProc, reinterpret_cast&lt;LPARAM&gt;(&amp;rwi));
+ UpdateThumbnail(hwndFrame, rwi.hwnd);
+}
+
+void OnChar(HWND hwnd, TCHAR ch, int cRepeat)
+{
+ switch (ch) {
+ case TEXT('1'):
+  ChooseRandomWindow(hwnd);
+  break;
+ }
+}
+
+ HANDLE_MESSAGE(hwnd, WM_CHAR, OnChar);</font>
+</pre>
+<p>
+The random window selector selects among windows with
+a caption which are visible and which are not already
+being shown in the thumbnail.
+(That last bit is so that when you press <kbd>1</kbd>,
+it will always pick a <i>different</i> window.)
+</p>
+<p>
+Run this program, and yippee, whenever you press the
+<kbd>1</kbd> key, you get a new thumbnail.
+</p>
+<p>
+Okay, but usually your program shows more than just a thumbnail.
+It probably incorporates the thumbnail into its other content,
+so let's draw some other content, too.
+Say, a single-character random message.
+</p>
+<pre>
+<font color="blue">TCHAR g_chMessage = '?';</font>
+
+void
+PaintContent(HWND hwnd, PAINTSTRUCT *pps)
+{
+ <font color="blue">if (!<a href="http://blogs.msdn.com/b/oldnewthing/archive/2006/03/27/561924.aspx">IsRectEmpty</a>(&amp;pps-&gt;rcPaint)) {
+  RECT rcClient;
+  GetClientRect(hwnd, &amp;rcClient);
+  DrawText(pps-&gt;hdc, &amp;g_chMessage, 1, &amp;rcClient,
+           DT_TOP | DT_CENTER);
+ }</font>
+}
+
+<font color="blue">void ChooseRandomMessage(HWND hwndFrame)
+{
+ g_chMessage = rand() % 26 + TEXT('A');
+ InvalidateRect(hwndFrame, nullptr, TRUE);
+}</font>
+
+void OnChar(HWND hwnd, TCHAR ch, int cRepeat)
+{
+ switch (ch) {
+ case TEXT('1'):
+  ChooseRandomWindow(hwnd);
+  break;
+ <font color="blue">case TEXT('2'):
+  ChooseRandomMessage(hwnd);
+  break;</font>
+ }
+}
+</pre>
+<p>
+Now, if you press <kbd>2</kbd>,
+we change the random message.
+There is a small optimiztion in
+<code>Paint&shy;Content</code> that skips the rendering
+if the paint rectangle is empty.
+Again, no big deal.
+</p>
+<p>
+Okay, but sometimes there are times where your program
+wants to update the thumbnail <i>and</i> the message
+at the same time.
+Like this:
+</p>
+<pre>
+void OnChar(HWND hwnd, TCHAR ch, int cRepeat)
+{
+ switch (ch) {
+ case TEXT('1'):
+  ChooseRandomWindow(hwnd);
+  break;
+ case TEXT('2'):
+  ChooseRandomMessage(hwnd);
+  break;
+ <font color="blue">case TEXT('3'):
+  ChooseRandomWindow(hwnd);
+  ChooseRandomMessage(hwnd);
+  break;</font>
+ }
+}
+</pre>
+<p>
+Run this program and press <kbd>3</kbd>
+and watch the thumbnail and message change simultaneously.
+</p>
+<p>
+And now we have a problem.
+</p>
+<p>
+You see, the
+<code>Choose&shy;Random&shy;Window</code> function updates
+the thumbnail immediately,
+since the thumbnail is presented by DWM,
+whereas the
+<code>Choose&shy;Random&shy;Message</code> function updates
+the message, but the new message doesn't appear on the screen
+until the next paint cycle.
+This means that there is a window of time where the new
+thumbnail is on the screen, but you still have the old message.
+Since painting is a low-priority activity,
+the window manager is going to deliver other messages to your
+window before it finally gets around to painting,
+and the visual mismatch between the thumbnail and the message can
+last for quite some time.
+(You can exaggerate this in the sample program by inserting a
+call to <code>Sleep</code>.)
+What can we do to get rid of this visual glitch?
+</p>
+<p>
+One solution would be to delay updating the thumbnail
+until the next paint cycle.
+At the paint cycle, we update the thumbnail <i>and</i>
+render the new message.
+Now both updates occur at the same time,
+and you get rid of the glitch.
+To trigger a paint cycle, we can invalidate
+a dummy 1&times;1 pixel in the window.
+</p>
+<pre>
+<font color="blue">HWND g_hwndThumbnailWanted;</font>
+
+void
+PaintContent(HWND hwnd, PAINTSTRUCT *pps)
+{
+ <font color="blue">UpdateThumbnail(hwnd, g_hwndThumbnailWanted);</font>
+
+ if (!IsRectEmpty(&amp;pps-&gt;rcPaint)) {
+  RECT rcClient;
+  GetClientRect(hwnd, &amp;rcClient);
+  DrawText(pps-&gt;hdc, &amp;g_chMessage, 1, &amp;rcClient,
+           DT_TOP | DT_CENTER);
+ }
+}
+
+void ChooseRandomWindow(HWND hwndFrame)
+{
+ RANDOMWINDOWINFO rwi = {};
+ EnumWindows(RandomEnumProc, reinterpret_cast(&amp;rwi));
+ <font color="blue">g_hwndThumbnailWanted = rwi.hwnd;
+ RECT rcDummy = { 0, 0, 1, 1 };
+ InvalidateRect(hwndFrame, &amp;rcDummy, FALSE);</font>
+}
+</pre>
+<p>
+Now, when we want to change the thumbnail, we just
+remember what thumbnail we want (the "logical" current
+thumbnail)
+and invalidate a dummy pixel in our window.
+The invalid dummy pixel triggers a paint cycle,
+and in our paint cycle, we call
+<code>Update&shy;Thumbnail</code> to synchronize
+the logical current thumbnail with the physical
+current thumbnail.
+And then we continue with our regular painting
+(in case there is also painting to be done, too).
+</p>
+<p>
+But it sure feels wasteful invalidating a pixel
+and forcing the <code>Draw&shy;Text</code> to occur
+even though we really didn't update anything.
+Wouldn't it be great if we could just say,
+"Could you fire up a paint cycle for me,
+even though there's technically nothing to paint?
+Because I actually do have stuff to paint,
+it's just something outside your knowledge
+since it is not rendered by GDI."
+</p>
+<p>
+Enter the
+<code>RDW_INTERNAL&shy;PAINT</code> flag.
+</p>
+<p>
+If you pass the
+<code>RDW_INTERNAL&shy;PAINT</code> flag
+to <code>Redraw&shy;Window</code>,
+that means,
+"Set the 'Yo, there's painting to be done!' flag.
+I know you think there's no actual painting to be done,
+but trust me on this."
+(<a href="http://blogs.msdn.com/b/oldnewthing/archive/2011/12/19/10249000.aspx">It's
+not actually a flag, but you can think of it that way</a>.)
+</p>
+<p>
+When the window manager then get around to deciding whether
+there is any painting to be done,
+before it concludes,
+"Nope, this window is all valid,"
+it checks if you made a special
+<code>RDW_INTERNAL&shy;PAINT</code> request,
+and if so, then it will generate
+a dummy <code>WM_PAINT</code> message for you.
+</p>
+<p>
+Using this new flag is simple:
+</p>
+<pre>
+ g_hwndThumbnailWanted = rwi.hwnd;
+ <font color="red">// <strike>RECT rcDummy = { 0, 0, 1, 1 };</strike>
+ // <strike>InvalidateRect(hwndFrame, &amp;rcDummy, FALSE);</strike></font>
+ <font color="blue">RedrawWindow(hwndFrame, nullptr, nullptr,
+              RDW_INTERNALPAINT);</font>
+</pre>
+<p>
+Now, when the program wants to update its thumbnail,
+it just schedules a fake-paint message with the window manager.
+These fake-paint messages coalesce with real-paint messages,
+so if you do an internal paint and an invalidation,
+only one actual paint message will be generated.
+If the paint message is a fake-paint message,
+the <code>rcPaint</code> will be empty,
+and you can test for that in your
+paint handler and skip your GDI painting.
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10427533" width="1" />

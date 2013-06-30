@@ -1,0 +1,136 @@
+<p>
+Today's Little Program will show a property sheet that covers multiple
+files,
+just like the one you get from Explorer if you multi-select a bunch
+of files and right-click them all then select <i>Properties</i>.
+</p>
+<p>
+In fact, that description of how you do the operation interactively
+maps directly to how you do the operation programmatically!
+</p>
+<pre>
+#define UNICODE
+#define <a href="http://blogs.msdn.com/b/oldnewthing/archive/2004/02/12/71851.aspx">_UNICODE</a>
+#define <a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/01/24/10387757.aspx">STRICT_TYPED_ITEMIDS</a>
+#include &lt;windows.h&gt;
+#include &lt;ole2.h&gt;
+#include &lt;shlobj.h&gt;
+#include &lt;atlbase.h&gt;
+#include &lt;atlalloc.h&gt;
+
+HRESULT GetUIObjectOf(
+    IShellFolder *psf,
+    HWND hwndOwner,
+    UINT cidl,
+    PCUITEMID_CHILD_ARRAY apidl, REFIID riid, void **ppv)
+{
+ return psf->GetUIObjectOf(hwndOwner, cidl, apidl, riid, nullptr, ppv);
+}
+</pre>
+<p>
+The <code>Get&shy;UI&shy;Object&shy;Of</code> helper function
+merely wraps the
+<code>IShell&shy;Folder::Get&shy;UI&shy;Object&shy;Of</code>
+method to insert the pesky <code>nullptr</code> parameter
+between the <code>riid</code> and <code>ppv</code>.
+The <code>riid</code> and <code>ppv</code> parameters
+by convention go right next to each other,
+and the <code>IID_PPV_ARGS</code> macro assumes
+that the function you're calling follows that convention.
+Unfortunately, the people who designed
+<code>IShell&shy;Folder::Get&shy;UI&shy;Object&shy;Of</code>
+didn't get the memo, and we've been stuck with it ever since.
+</p>
+<pre>
+HRESULT InvokeCommandByVerb(
+    IContextMenu *pcm,
+    HWND hwnd,
+    LPCSTR pszVerb)
+{
+ HMENU hmenu = CreatePopupMenu();
+ HRESULT hr = hmenu ? S_OK : E_OUTOFMEMORY;
+ if (SUCCEEDED(hr)) {
+  hr = pcm-&gt;QueryContextMenu(hmenu, 0, 1, 0x7FFF, CMF_NORMAL);
+  if (SUCCEEDED(hr)) {
+   CMINVOKECOMMANDINFO info = { 0 };
+   info.cbSize = sizeof(info);
+   info.hwnd = hwnd;
+   info.lpVerb = pszVerb;
+   hr = pcm-&gt;InvokeCommand(&amp;info);
+  }
+  DestroyMenu(hmenu);
+ }
+ return hr;
+}
+</pre>
+<p>
+The <code>Invoke&shy;Command&shy;By&shy;Verb</code> function
+merely
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2004/09/20/231739.aspx">
+hosts an <code>IContext&shy;Menu</code> and invokes a single verb</a>.
+</p>
+<p>
+Okay, those are the only two helper functions we need this week.
+The rest we can steal from earlier articles.
+</p>
+<p>
+For the purpose of illustration,
+the program will display a multi-file property sheet for the first
+two files in your
+My Documents folder folder.
+Remember, Little Programs do little to no error checking.
+</p>
+<pre>
+int __cdecl wmain(int, wchar_t **)
+{
+ <a href="http://blogs.msdn.com/b/oldnewthing/archive/2004/05/20/135841.aspx">CCoInitialize</a> init;
+ <a href="http://blogs.msdn.com/b/oldnewthing/archive/2008/05/28/8555658.aspx">ProcessReference</a> ref;
+ CComPtr&lt;IShellFolder&gt; spsf;
+ <a href="http://blogs.msdn.com/b/oldnewthing/archive/2011/08/30/10202076.aspx">BindToCsidl</a>(CSIDL_MYDOCUMENTS, IID_PPV_ARGS(&amp;spsf));
+ CComPtr&lt;IEnumIDList&gt; speidl;
+ spsf-&gt;EnumObjects(nullptr, SHCONTF_NONFOLDERS, &amp;speidl);
+ if (!speidl) return 0;
+ CComHeapPtr&lt;ITEMID_CHILD&gt; spidl1;
+ CComHeapPtr&lt;ITEMID_CHILD&gt; spidl2;
+ if (speidl-&gt;Next(1, &amp;spidl1, nullptr) != S_OK) return 0;
+ if (speidl-&gt;Next(1, &amp;spidl2, nullptr) != S_OK) return 0;
+ PCUITEMID_CHILD rgpidl[2] = { spidl1, spidl2 };
+ CComPtr&lt;IContextMenu&gt; spcm;
+ GetUIObjectOf(spsf, nullptr, 2, rgpidl, IID_PPV_ARGS(&amp;spcm));
+ if (!spcm) return 0;
+ InvokeCommandByVerb(spcm, "properties");
+ return 0;
+}
+</pre>
+<p>
+Because everybody freaks out if I write code that doesn't
+run on Windows&nbsp;XP,
+I used the
+<code>Bind&shy;To&shy;CSIDL</code> function
+instead of one of its more modern equivalents
+to get access to the My Documents folder.
+</p>
+<p>
+Once we have My Documents,
+we ask to enumerate its non-folders.
+If the enumeration fails or says that there are no items (by returning
+<code>S_FALSE</code>), then we bail immediately.
+</p>
+<p>
+Next, we enumerate two items from the folder.
+If we can't get both, then we bail.
+</p>
+<p>
+We then create a two-item array and
+get the <code>IContext&shy;Menu</code> UI object
+for the collection.
+</p>
+<p>
+Finally, we invoke the <code>"properties"</code> verb on the context menu.
+</p>
+<p>
+And that's it.
+If you run this program, you'll see a context menu for the first
+two files in your My Documents folder.
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10426275" width="1" />

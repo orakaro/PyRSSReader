@@ -1,0 +1,323 @@
+<p>
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/06/11/10424940.aspx">
+Last time</a>,
+we learned about how connection points work.
+One special case of this is where the connection interface
+is a dispatch interface.
+</p>
+<p>
+Dispatch interfaces are, as the name suggests,
+COM interfaces based on <code>IDispatch</code>.
+The <code>IDispatch</code> interface is the base interface
+for OLE automation objects,
+and if you want your connection point interface to be usable
+from script,
+you probably should make it a dispatch interface.
+</p>
+<p>
+I'm assuming you know how <code>IDispatch</code> works.
+The short version is that script that wants to invoke
+a method or property calls
+<code>Get&shy;IDs&shy;Of&shy;Names</code> to get the
+<i>dispatch ID</i> for the method or property it wants
+to access,
+and it uses the type library to figure out
+things like the parameters and return value.
+Once the scripting engine figures out how the method or property
+expects to be called,
+it can call
+<code>IDispatch::Invoke</code>
+passing the dispatch ID and a <code>DISPPARAMS</code> structure
+that holds the parameters.
+</p>
+<p>
+Nowadays, this sort of thing goes by the fancy name of <i>reflection</i>,
+but back in the OLE Automation days,
+it was simply all in a day's work.
+<i>You kids think you invented everything</i>.
+</p>
+<p>
+Just like as with regular connection point interfaces,
+a dispatch interface used as a connection point interface
+consists of events which are formally implemented as methods.
+</p>
+<pre>
+dispinterface DWidgetEvents
+{
+ [id(WDISPID_RENAMED)]
+ HRESULT Renamed([in] BSTR oldName, [in] BSTR newName);
+...
+};
+</pre>
+<p>
+You declare that your object is a source of events for this interface
+by noting it in your object declaration.
+(Thanks, Medinoc for
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/06/12/10425215.aspx#10425408">
+noting the error in the original version of this article</a>.)
+</p>
+<pre>
+coclass Widget
+{
+ [default] interface IWidget;
+ <font color="blue">[default, source] dispinterface DWidgetEvents;</font>
+}
+</pre>
+<p>
+A client registers with the connection point with the
+<code>DIID_DWidget&shy;Events</code> interface.
+By convention, dispatch interfaces usually end
+with the word <code>Events</code>
+and are often prefixed with the letter <code>D</code>,
+and the interface ID symbol begins with <code>DIID</code>
+rather than simply <code>IID</code>.
+These conventions are not universally adhered-to,
+so don't freak out if you see people who don't follow them.
+(If you declare your dispatch interface in an IDL file,
+then the MIDL compiler will
+generate the dispatch interface ID with
+the <code>DIID</code> prefix for you.)
+</p>
+<p>
+Now, formally, when the connection point wants to invoke
+the <code>Renamed</code> method, it calls
+<code>Get&shy;IDs&shy;Of&shy;Names</code> to get the ID
+for the method called <code>L"Renamed"</code>, and asks
+for the type library to figure out what the parameters are.
+But this is frequently just pointless busy-work:
+The connection point often already knows the answer,
+since the connection point already knows what interface
+it is talking to.
+It doesn't need to do any "reflection" since the connection
+point already knows what the IDs and calling conventions are.
+In the same way, your C# code doesn't need to use reflection
+to call a method on an object whose assembly you already have
+referenced in your project.
+(The <code>Get&shy;IDs&shy;Of&shy;Names</code> exists not for
+connection points, but rather to assist
+dynamically-typed languages, where you can try to invoke any method
+on any object, and the method is looked up at run time.)
+</p>
+<p>
+In other words, the connection point already knows that
+the ID for the method <code>Rename</code> is
+<code>WDISPID_RENAMED</code>, and that it takes two
+<code>BSTR</code> parameters,
+because that was part of the contract for registering with
+the connection point in the first place.
+</p>
+<p>
+This means that in practice, the only method on the
+client that is ever called is
+<code>IDispatch::Invoke</code>.
+</p>
+<p>
+Here is a template base class that I use for my connection point interface
+implementations of dispatch interfaces.
+We'll discuss the pieces afterwards:
+</p>
+<pre>
+template&lt;typename DispInterface&gt;
+class CDispInterfaceBase : public DispInterface
+{
+public:
+ CDispInterfaceBase() : m_cRef(1), m_dwCookie(0) { }
+
+ /* IUnknown */
+ IFACEMETHODIMP QueryInterface(REFIID riid, void **ppv)
+ {
+  *ppv = nullptr;
+  HRESULT hr = E_NOINTERFACE;
+  if (riid == IID_IUnknown || riid == IID_IDispatch ||
+      riid == __uuidof(DispInterface))
+  {
+   *ppv = static_cast&lt;DispInterface *&gt;
+          (static_cast&lt;IDispatch*&gt;(this));
+   AddRef();
+   hr = S_OK;
+  }
+  return hr;
+ }
+
+ IFACEMETHODIMP_(ULONG) AddRef()
+ {
+  return InterlockedIncrement(&amp;m_cRef);
+ }
+
+ IFACEMETHODIMP_(ULONG) Release()
+ {
+  LONG cRef = InterlockedDecrement(&amp;m_cRef);
+  if (cRef == 0) delete this;
+  return cRef;
+ }
+
+ // *** IDispatch ***
+ IFACEMETHODIMP GetTypeInfoCount(UINT *pctinfo)
+ {
+  *pctinfo = 0;
+  return E_NOTIMPL;
+ }
+
+ IFACEMETHODIMP GetTypeInfo(UINT iTInfo, LCID lcid,
+                            ITypeInfo **ppTInfo)
+ {
+  *ppTInfo = nullptr;
+  return E_NOTIMPL;
+ }
+
+ IFACEMETHODIMP GetIDsOfNames(REFIID, LPOLESTR *rgszNames,
+                              UINT cNames, LCID lcid,
+                              DISPID *rgDispId)
+ {
+  return E_NOTIMPL;
+ }
+
+ IFACEMETHODIMP Invoke(
+    DISPID dispid, REFIID riid, LCID lcid, WORD wFlags,
+    DISPPARAMS *pdispparams, VARIANT *pvarResult,
+    EXCEPINFO *pexcepinfo, UINT *puArgErr)
+ {
+  if (pvarResult) VariantInit(pvarResult);
+  return SimpleInvoke(dispid, pdispparams, pvarResult);
+ }
+
+ // Derived class must implement SimpleInvoke
+ virtual HRESULT SimpleInvoke(DISPID dispid,
+    DISPPARAMS *pdispparams, VARIANT *pvarResult) = 0;
+
+public:
+ HRESULT Connect(IUnknown *punk)
+ {
+  HRESULT hr = S_OK;
+  CComPtr&lt;IConnectionPointContainer&gt; spcpc;
+  if (SUCCEEDED(hr)) {
+   hr = punk-&gt;QueryInterface(IID_PPV_ARGS(&amp;spcpc));
+  }
+  if (SUCCEEDED(hr)) {
+  hr = spcpc-&gt;FindConnectionPoint(__uuidof(DispInterface), &amp;m_spcp);
+  }
+  if (SUCCEEDED(hr)) {
+  hr = m_spcp-&gt;Advise(this, &amp;m_dwCookie);
+  }
+  return hr;
+ }
+
+ void Disconnect()
+ {
+  if (m_dwCookie) {
+   m_spcp-&gt;Unadvise(m_dwCookie);
+   m_spcp.Release();
+   m_dwCookie = 0;
+  }
+ }
+
+private:
+ LONG m_cRef;
+ CComPtr&lt;IConnectionPoint&gt; m_spcp;
+ DWORD m_dwCookie;
+};
+</pre>
+<p>
+First, a distraction: Our <code>Query&shy;Interface</code>
+implementation performs a double-cast of <code>this</code>
+to <code>IDispatch</code>, then to the templated interface.
+This ensures that the templated interface pointer
+and <code>IDispatch</code> are compatible.
+It would be bad if somebody tried to use this
+<code>Query&shy;Interface</code> implementation
+with something unrelated to <code>IDispatch</code>.
+(Yes, I could've used <code>std::is_base_of</code>,
+but I'm an old-timer who grew up before TR1.)
+</p>
+<p>
+The bulk of the class merely stubs out all the methods
+of <code>IDispatch</code>,
+save for
+<code>IDispatch::Invoke</code>, which does a little
+grunt work (initializing the result <code>VARIANT</code>)
+and then leaves the derived class to do the heavy lifting.
+</p>
+<p>
+Finally, there are two public methods
+<code>Connect</code> and <code>Disconnect</code>.
+These perform the <code>Advise</code> and
+<code>Unadvise</code> calls we saw yesterday.
+To simplify things for our caller,
+we save the <code>IConnection&shy;Pointer</code>
+we registered against so that the caller doesn't
+have to pass it back in when disconnecting.
+</p>
+<p>
+<b>Exercise</b>:
+Is the <code>m_spcp.Release()</code> call
+in <code>Disconnect</code>
+really necessary?
+(Assuming that <code>Connect</code> is called at most once.)
+</p>
+<p>
+This helper template class makes writing dispatch interface
+connection point clients really simple,
+since all you have to do is implement <code>Simple&shy;Invoke</code>
+in the form of a <code>switch</code> statement on the
+dispatch IDs you care about:
+</p>
+<pre>
+class CWidgetClient : public CDispInterfaceBase
+{
+public:
+ CWidgetClient() { }
+
+ HRESULT SimpleInvoke(
+    DISPID dispid, DISPPARAMS *pdispparams, VARIANT *pvarResult)
+{
+ switch (dispid) {
+ case WDISPID_RENAMED:
+  HeyLookItGotRenamed(pdispparams-&gt;rgvarg[0].bstrVal,
+                      pdispparams-&gt;rgvarg[1].bstrVal);
+  break;
+ }
+ return S_OK;
+};
+</pre>
+<p>
+In the <code>Simple&shy;Invoke</code> method,
+we switch on the dispatch ID,
+and if we see one we like, we extract the parameters from the
+<code>pdispparams</code>.
+</p>
+<p>
+<b>Update</b>: Commenter parkrrr
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/06/12/10425215.aspx#10425376">
+points out</a> a huge gotcha with the
+<code>DISP&shy;PARAMS</code> structure:
+The parameters are passed in <i>reverse</i> order.
+I don't know why.
+They just are.
+</p>
+<p>
+Next time, we'll start hooking up events to our Little Program
+so it can update when the user navigates an Explorer or
+Internet Explorer window.
+</p>
+<p>
+<b>Warning! Managed code!</b>
+The CLR
+understands the connection point/dispatch interface
+convention and exposes a dispatch event
+to managed code
+<a href="http://msdn.microsoft.com/library/66ahbe6y">
+in the form of a CLR event and corresponding delegate</a>.
+For example, our <code>Renamed</code> event is
+exposed as an event called <code>Renamed</code>,
+with delegate type
+<code>DWidget&shy;Events_Renamed&shy;Event&shy;Handler</code>.
+You can listen on the event the way you listen
+to any other CLR event:
+<code>widget.Renamed += this.OnRenamed;</code>.
+</p>
+<p>
+<b>Note</b>: I completely ignored the subject of dual interfaces.
+You can read about those if you like,
+but we won't need to know about them for the job at hand.
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10425215" width="1" />

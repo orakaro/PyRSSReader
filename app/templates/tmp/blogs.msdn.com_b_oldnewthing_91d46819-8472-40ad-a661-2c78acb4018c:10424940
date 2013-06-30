@@ -1,0 +1,269 @@
+<p>
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/06/10/10424662.aspx">
+Last time</a>,
+we saw how to enumerate all the Internet Explorer and
+Explorer Windows and see what they are viewing.
+But that program printed static information.
+It didn't track the changes to the windows if the user
+clicked to another Web page or navigated to a different folder.
+</p>
+<p>
+In order to hook that up, we
+need to understand the connection point model and the
+way events are expressed in dispatch interfaces.
+First, let's look at the connection point model.
+These topics confused me when I first met them
+(in part because I didn't do a good job of mentally
+separating them into two topics and instead treated it
+as one big topic),
+so I'm going to spend a few days
+trying to explain how it works,
+and then later this week, we'll actually hook things up.
+(And actually hooking it up is a lot easier than explaining it.)
+</p>
+<p>
+Today, the connection point model.
+</p>
+<p>
+Suppose you have a widget which can have multiple clients.
+The clients can communicate with the widget by invoking methods
+on the widget, like
+<code>IWidget::Set&shy;Color</code>.
+but how does the widget communicate with its clients?
+Well, since this is COM, the first thing you need is an interface,
+say,
+<code>IWidget&shy;Client</code>.
+The idea is that each client implements
+<code>IWidget&shy;Client</code>,
+and when the widget needs to, say, notify each client that
+the color changed,
+it can invoke
+<code>IWidget&shy;Client::On&shy;Color&shy;Changed</code>
+on each one.
+Each client can register with the widget for notifications.
+</p>
+<p>
+The COM interface for standardizing the registration mechanism
+is <code>IConnection&shy;Point</code>.
+A <i>connection point</i>
+acts as a middle-man between
+the widget and all its clients:
+Whenever the widget needs to notify all its clients,
+it tells the connection point to do it.
+</p>
+<table>
+<tr>
+<table border="0" cellpadding="0" cellspacing="0" summary="To the left is the widget. An arrow goes from the widget to the connection point in the center. Three arrows go from the connection point to clients A, B, and C on the right.">
+<tr>
+    <td align="center" rowspan="5" style="border: solid black .75pt; padding: 3pt;">
+    Widget</td>
+    <td></td>
+    <td align="center" rowspan="5" style="border: solid black .75pt; padding: 3pt;">
+    Connection<br />Point</td>
+    <td>&rarr;</td>
+    <td align="center" style="border: solid black .75pt; padding: 3pt;">
+    Client&nbsp;A</td>
+</tr>
+<tr style="height: 1ex;">
+    <td></td>
+    <td></td>
+    <td></td>
+</tr>
+<tr>
+    <td>&rarr;</td>
+    <td>&rarr;</td>
+    <td align="center" style="border: solid black .75pt; padding: 3pt;">
+    Client&nbsp;B</td>
+</tr>
+<tr style="height: 1ex;">
+    <td></td>
+    <td></td>
+    <td></td>
+</tr>
+<tr>
+    <td></td>
+    <td>&rarr;</td>
+    <td align="center" style="border: solid black .75pt; padding: 3pt;">
+    Client&nbsp;C</td>
+</tr>
+</table>
+<p>
+A client registers with a connection point by calling
+<code>IConnection&shy;Point::Advise</code>,
+and it unregisters by calling
+<code>IConnection&shy;Point::Unadvise</code>.
+</p>
+<p>
+Okay, that's great,
+but how do clients find the connection point so they can register with it?
+</p>
+<p>
+The widget exposes an interface known as
+<code>IConnection&shy;Point&shy;Container</code>
+which provides access to an object's connection points.
+The client can call the
+<code>IConnection&shy;Point&shy;Container::Find&shy;Connection&shy;Point</code> method
+to get access to a specific connection point.
+</p>
+<p>
+Here's how the pieces fit together:
+</p>
+<pre>
+// error checking elided for expository purposes
+
+void IUnknown_FindConnectionPoint(IUnknown *punk,
+                                  REFIID riid,
+                                  IConnectionPoint **ppcp)
+{
+ // get the IConnectionPointContainer interface
+ CComQIPtr&lt;IConnectionPointContainer&gt; spcpc(punk);
+
+ // Locate the connection point
+ spcpc-&gt;FindConnectionPoint(riid,  ppcp);
+}
+
+class CClient : public IWidgetClient
+{
+...
+ IWidget *m_pWidget;
+ DWORD m_dwCookie;
+};
+
+CClient::RegisterWidgetClient()
+{
+ // Find the IWidgetClient connection point
+ CComPtr&lt;IConnectionPoint&gt; spcp;
+ IUnknown_FindConnectionPoint(m_pWidget,
+                              IID_IWidgetClient, &amp;spcp);
+
+ // register with it
+ spcp-&gt;Advise(this, &amp;m_dwCookie);
+}
+
+CClient::UnregisterWidgetClient()
+{
+ // Find the IWidgetClient connection point
+ CComPtr&lt;IConnectionPoint&gt; spcp;
+ IUnknown_FindConnectionPoint(m_pWidget,
+                              IID_IWidgetClient, &amp;spcp);
+
+ // unregister from it
+ spcp-&gt;Unadvise(m_dwCookie);
+}
+</pre>
+<p>
+After registering as a widget client,
+the <code>CClient</code> object will receive
+method calls on its <code>IWidget&shy;Client</code>
+until it unregisters.
+</p>
+<p>
+Now the widget and clients have two-way communication.
+If the clients want to initiate the communuication,
+it can call a method on <code>IWidget</code>.
+If the widget wants to initiate the communication,
+it can call a method on <code>IWidget&shy;Client</code>.
+</p>
+<p>
+Note that we've created a giant circular reference.
+The widget has a reference to its connection point
+(so it can tell it to fire a notification to all its clients),
+and the connection point has a reference to the widget
+client
+(so it can forward the notification along),
+and the widget client has a reference to the widget
+in its <code>m_pWidget</code> member.
+In order to break this cycle,
+you have to remember to explicitly call
+<code>Unregister&shy;Widget&shy;Client</code>
+when you are no longer interested in receiving
+widget notifications.
+</p>
+<p>
+Note that even though the arrows in the diagram above
+flow from left to right (from widget to clients),
+that doesn't mean that the
+information flow is strictly left-to-right.
+You can pass information in the other direction
+via return values or output parameters.
+</p>
+<p>
+For example, there might be a method on
+the <code>IWidget&shy;Client</code> interface
+called <code>Get&shy;Color</code>:
+</p>
+<pre>
+interface IWidgetClient : IUnknown
+{
+ ...
+ HRESULT GetColor([out] COLORREF *pclr);
+ ...
+};
+</pre>
+<p>
+Since there can be multiple clients, the widget
+needs to have some sort of rule for deciding which
+client gets to choose the color.
+It might decide to ask each client in turn for a color,
+until one of them returns <code>S_OK</code>,
+and that client's color is used and no further clients
+are notified.
+</p>
+<p>
+Or maybe there's a method called
+<code>On&shy;Save</code>:
+</p>
+<pre>
+interface IWidgetClient : IUnknown
+{
+ ...
+ HRESULT OnSave([in] IPropertyStorage *pps);
+ ...
+};
+</pre>
+<p>
+The convention here might be that all clients
+will be notified of the Save operation and they
+can write any additional information to the
+<code>IProperty&shy;Storage</code> while handing
+the notification.
+</p>
+<p>
+Those are just examples.
+Feel free to make up your own.
+The point is that just because the arrows go from the
+widget to the clients doesn't mean that information
+can't flow back the other way.
+</p>
+<p>
+Most of the time, you have the simple case where
+a widget will expose a single connection point.
+In that case, the generality of the
+<code>IConnection&shy;Point&shy;Container</code>
+may seem unnecessary.
+But it allows you to add new connection points later.
+For example, you might have multiple client interfaces
+for different types of clients.
+You could have
+<code>IWidget&shy;Color&shy;Client</code>
+for clients that are interested only in color changes,
+and
+<code>IWidget&shy;Network&shy;Client</code>
+for clients that are interested only in monitoring the
+widget's network activity.
+</p>
+<p>
+Or maybe you didn't plan on having multiple connection points
+originally,
+but in the second version of your product,
+you want to add additional methods to
+<code>IWidget&shy;Client</code>,
+so you need to create
+<code>IWidget&shy;Client2</code>,
+which means that you also need a new connection point for it.
+</p>
+<p>
+Next time, a look at the special case where
+the client interface is a dispatch interface.
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10424940" width="1" />

@@ -1,0 +1,299 @@
+<p>
+Now that we've had
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/06/04/10423296.aspx">
+a quick introduction to asynchronous input</a>,
+let's look at some of the details.
+Remember,
+<b>this is
+<a href="http://grammar.about.com/od/qaaboutrhetoric/f/QAmixmetaphor.htm">
+a peek under the hood at how the sausage is made</a></b>.
+The algorithm described here is not part of the API contract
+and it can change at any time,
+as long as it services the overall goal of serializing input.
+</p>
+<p>
+Let's start by looking at how things worked in the 16-bit world.
+Even though 16-bit Windows didn't use the term <i>thread</i>
+(since each application was single-threaded),
+I will still use the term since that makes the transition to the
+32-bit world more straightforward.
+</p>
+<p>
+As a point of terminology,
+I say that a message <i>belongs to</i> a thread
+if the message targets a window which belongs to that thread.
+Equivalently, the thread <i>owns</i> the message.
+</p>
+<p>
+Now, the goal is to dispatch
+input messages in chronological order:
+Only the thread which owns the next input message can retrieve it.
+All other input must wait their turn to come to the front of the
+input queue.
+</p>
+<p>
+In 16-bit Windows, all input gets added to a system-wide input
+queue, and
+the basic algorithm used by
+<code>Peek&shy;Message</code> and <code>Get&shy;Message</code>
+for retrieving messages from the input queue
+goes like this.
+</p>
+<ul>
+<li>Look at the first message in the input queue:
+    <ul>
+    <li>If the message belongs to some other thread,
+        then stop. Return no message to the caller.
+    <li>Otherwise,
+        return the message we found.
+    </ul>
+<li>If there are no messages in the input queue, then
+    there is no input.
+    Return no message.
+</ul>
+<p>
+All the rest is tweaking the boundary cases.
+</p>
+<p>
+For example, suppose there are two input messages in the input queue,
+message&nbsp;1 for thread&nbsp;A,
+and message&nbsp;2 for thread&nbsp;B.
+Thread&nbsp;A calls <code>Get&shy;Message</code>,
+and the above algorithm returns message&nbsp;1 to thread&nbsp;A,
+at which point the new "first message" is message&nbsp;2,
+and if thread&nbsp;B calls
+<code>Get&shy;Message</code>,
+it will get message&nbsp;2.
+</p>
+<p>
+The catch is that according to the above algorithm,
+thread&nbsp;B can be told about message&nbsp;2
+<i>before thread&nbsp;A has finished processing message&nbsp;1</i>.
+You've introduced a race condition that breaks the rule that
+input is processed sequentially:
+Thread&nbsp;B can race ahead of thread&nbsp;A and start processing
+message&nbsp;2 before thread&nbsp;A can even get started processing
+message&nbsp;1.
+</p>
+<p>
+To fix this, we add a new state to the input queue that says
+"Yea, I just gave somebody an input message,
+and I'm waiting for that thread to finish processing it before
+I will hand out another input message."
+</p>
+<ul>
+<li><font color="blue">(New!)
+    If the input queue is waiting for another thread to finish
+    processing an input message, then stop and return no message.</font>
+<li><font color="blue">(New!)
+    If the input queue is waiting for the current thread to
+    finish processing an input message,
+    then mark the input queue as no longer waiting. (We finished processing
+    it and have come back for more!)</font>
+<li>Look at the first message in the input queue:
+    <ul>
+    <li>If the message belongs to some other thread,
+        then stop. Return no message to the caller.
+    <li>Otherwise,
+        <font color="blue">(New!)
+        mark the input queue as waiting for the current
+        thread to finish processing an input message</font>,
+        and return the message we found.
+    </ul>
+<li>If there are no messages in the input queue, then
+    there is no input. Return no message.
+</ul>
+<p>
+Okay, we fixed a race condition.
+But now there's a new problem:
+Suppose thread&nbsp;A retrieves an input message
+(and therefore puts the input queue into the
+"waiting for thread&nbsp;A" state),
+and then thread&nbsp;A sends a message to thread&nbsp;B,
+and thread&nbsp;B wants to display a dialog box or a menu.
+According to the rules as we have them so far,
+we would have a deadlock:
+That <code>Send&shy;Message</code> call will not return to the
+first thread until the modal UI is complete,
+but the modal UI cannot complete because the input queue
+is waiting for thread&nbsp;A to finish processing the input message.
+</p>
+<p>
+The fix for this special case is that if a thread asks for
+an input message,
+and it is handling an inbound <code>Send&shy;Message</code>,
+then the input queue declares that any in-progress input message
+has finished processing.
+One way of interpreting this rule is to say,
+"If a thread sends a message to another thread,
+then that implicitly completes input processing."
+</p>
+<ul>
+<li><font color="blue">(New!)
+    If the input queue is waiting for another thread to finish
+    processing an input message,
+    and the current thread is processing an inbound sent message,
+    then mark the input queue as no longer waiting.</font>
+<li>If the input queue is waiting for another thread to finish
+    processing an input message, then stop and return no message.
+<li>If the input queue is waiting for the current thread to
+    finish processing an input message,
+    then mark the input queue as no longer waiting.
+<li>Look at the first message in the input queue:
+    <ul>
+    <li>If the message belongs to some other thread,
+        then stop. Return no message to the caller.
+    <li>Otherwise,
+        mark the input queue as waiting for the current
+        thread to finish processing an input message,
+        and return the message we found.
+    </ul>
+<li>If there are no messages in the input queue, then
+    there is no input. Return no message.
+</ul>
+<p>
+Recall that
+you are allowed to pass a message range filter
+and
+<a href="http://blogs.msdn.com/b/oldnewthing/archive/2013/03/22/10404367.aspx">
+a window handle filter</a>
+to the
+<code>Peek&shy;Message</code> and
+<code>Get&shy;Message</code> functions.
+The above algorithm was developed on the assumption that
+there was no message retrieval filter.
+First, let's add the message range filter to the algorithm:
+</p>
+<ul>
+<li>If the input queue is waiting for another thread to finish
+    processing an input message,
+    and the current thread is processing an inbound sent message,
+    then mark the input queue as no longer waiting.
+<li>If the input queue is waiting for another thread to finish
+    processing an input message, then stop and return no message.
+<li>If the input queue is waiting for the current thread to
+    finish processing an input message,
+    then mark the input queue as no longer waiting.
+<li>Look at the first message in the input queue
+    <font color="blue">which satisfies the message range filter (New!)</font>:
+    <ul>
+    <li>If the message belongs to some other thread,
+        then stop. Return no message to the caller.
+    <li>Otherwise,
+        mark the input queue as waiting for the current
+        thread to finish processing an input message,
+        and return the message we found.
+    </ul>
+<li>If there are no messages in the input queue
+    <font color="blue">which satisfy the message range filter (New!)</font>,
+    then there is no input. Return no message.
+</ul>
+<p>
+That wasn't so hard.
+If you pass a message range filter, then we care only about
+messages that pass the filter in determining which one is "at
+the head of the input queue".
+Without this additional rule, you wouldn't be able to
+"peek into the future" to see if, for example, there is
+a mouse message in the input queue sitting behind the keyboard message
+that is at the front of the input queue.
+</p>
+<p>
+Adding the window handle filter is a little trickier,
+because
+we still want to let input be processed in order
+(among messages which satisfy the message range filter).
+</p>
+<ul>
+<li>If the input queue is waiting for another thread to finish
+    processing an input message,
+    and the current thread is processing an inbound sent message,
+    then mark the input queue as no longer waiting.
+<li>If the input queue is waiting for another thread to finish
+    processing an input message, then stop and return no message.
+<li>If the input queue is waiting for the current thread to
+    finish processing an input message,
+    then mark the input queue as no longer waiting.
+<li>Look at the first message in the input queue which
+    satisfies the message range filter and
+    <font color="blue">(New!) either belongs to some other thread
+    or belongs to the current thread and matches the
+    window handle filter</font>.
+    <ul>
+    <li>If the message belongs to some other thread,
+        then stop. Return no message to the caller.
+    <li>Otherwise,
+        mark the input queue as waiting for the current
+        thread to finish processing an input message,
+        and return the message we found.
+    </ul>
+<li>If no such message exists,
+    then there is no input. Return no message.
+</ul>
+<p>
+In other words,
+the window handle is used to control
+which message is ultimately retrieved,
+but it does not let you deny another thread access to input
+which matches the message range filter.
+</p>
+<p>
+Whew,
+that's how 16-bit Windows dispatched input.
+</p>
+<p>
+How do we port this to 32-bit Windows and asynchronous input?
+</p>
+<p>
+First, we give each thread group its own input queue,
+rather than having a single system-wide input queue.
+</p>
+<p>
+Second, whenever the above algorithm says <i>the input queue</i>,
+change it to say
+<i>the calling thread's input queue</i>.
+</p>
+<p>
+And that's it!
+</p>
+<p>
+In the absence of thread attachment, each thread has its own
+input queue,
+so most of the above rules have no effect.
+For example,
+You will never see a message that belongs to another thread,
+because messages that belong to other threads go into
+those other threads' input queues, not yours.
+You will never find that your input queue is waiting for another thread,
+because no other threads have access to your input queue.
+In the case where there is only one thread associated with an
+input queue, the algorithm simplifies to
+</p>
+<ul>
+<li>Return the first message in the input queue
+    that satisfies both the message range filter
+    and the window handle filter, if any.
+</ul>
+<p>
+It's only if you start attaching threads to each other
+that you have multiple threads associated with a single input queue,
+and then all these extra rules start to have an effect.
+</p>
+<p>
+Next time, we'll explore some of the consequences of synchronous input
+by writing some poorly-behaving code and observing how the system responds.
+Along the way, we'll discover an interesting paradox
+introduced by the above algorithm.
+</p>
+<p>
+<b>Exercise</b>:
+The alternative interpretation I gave above does not match
+the description of the rule,
+because the rule allows <i>any</i> thread processing an inbound
+<code>Send&shy;Message</code> to clear the input queue's wait state.
+Why does the actual rule permit any thread clear the wait state,
+instead of first checking that the inbound
+<code>Send&shy;Message</code> is coming from the thread that the
+input queue is waiting for?
+</p>
+<div style="clear: both;"></div><img height="1" src="http://blogs.msdn.com/aggbug.aspx?PostID=10423678" width="1" />
