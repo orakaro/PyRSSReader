@@ -50,7 +50,7 @@
       <ul class="nav nav-list bs-docs-sidenav">
         <li class="menu-item"><a href="{{ url_for('feed.home') }}"><i class="icon-home "></i> Home</a></li>
         <li class="menu-item"><a href="{{ url_for('feed.starred') }}"><i class="icon-star"></i> Star</a></li>
-        <li class="menu-item"><a href="{{ url_for('feed.explore') }}"><i class="icon-th"></i> Explore</a></li>
+        <li class="menu-item"><a href="{{ url_for('feed.explore') }}"><i class="icon-th"></i> Trend</a></li>
         <br>
         {% for feedName in starredEntries %}
         <li class="menu-item"><a href="#hero-{{starredEntries.keys().index(feedName)}}"><i class="icon-forward"></i> {{feedName[:5]+'...'}}</a></li>

@@ -6,6 +6,7 @@ from app.rss_reader.parser import RSSParser
 from app.users.models import User
 from app.feed.models import Feed, FeedUser, Star
 from app.users.decorators import requires_login
+import collections
 
 mod = Blueprint('feed', __name__, url_prefix='/feed')
 
@@ -16,10 +17,11 @@ def explore():
   Find all starred by other people
   """
   exploreEntries = findExplore()
+  ranking_order = r_order(exploreEntries)
   form = RegisterForm(request.form)
   if form.validate_on_submit():
     insertFeed(form.link.data)
-  return render_template("feed/explore.html", form=form, exploreEntries = exploreEntries)
+  return render_template("feed/explore.html", form=form, exploreEntries = exploreEntries, ranking_order = ranking_order )
  
 @requires_login
 @mod.route('/starred/', methods=['GET', 'POST'])
@@ -236,7 +238,7 @@ def findExplore():
   """
   Return a dictionary, key = feed name, value = entry obejct (member of feedparser.entries[]) 
   """
-  rel = {}
+  rel = collections.defaultdict(dict)
   starred = Star.query.all() 
   for entry in starred:
     fan = User.query.filter_by(id=entry.getUser()).first()
@@ -246,8 +248,30 @@ def findExplore():
     feedName = feed.getName()
     feedLink = feed.getLink()
     # find what entry have the entryId equal to entryId from DB
-    rssParser = RSSParser(feedLink)
-    for e in rssParser.getDTO().entries:
-      if e.id == entryId:
-        rel.setdefault(feedName, [fan]).append(e)
+    starredUser = Star.query.filter_by(entryid=entryId).all()
+    for su in starredUser:
+      fan = User.query.filter_by(id=su.getUser()).first()
+      rel[feedName].setdefault(entryId,[]).append(fan)
+
+  for k,v in rel.iteritems():
+    for cur_entryId in v:
+      cur_feed = Feed.query.filter_by(name = k).first() 
+      rssParser = RSSParser(cur_feed.getLink())
+      for e in rssParser.getDTO().entries:
+        if e.id == cur_entryId:
+          v[e]=list(set(v[cur_entryId]))
+          del v[cur_entryId]
+  
   return rel
+
+def r_order(exploreEntries):
+  order=[]
+  for feedName, entries in exploreEntries.iteritems():
+    for entry in entries.keys():
+      order.append(len(entries[entry]))
+
+  rel=list(set(order))
+  rel.sort(reverse=True)
+  return rel 
+
+

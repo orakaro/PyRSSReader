@@ -50,10 +50,12 @@
       <ul class="nav nav-list bs-docs-sidenav">
         <li class="menu-item"><a href="{{ url_for('feed.home') }}"><i class="icon-home "></i> Home</a></li>
         <li class="menu-item"><a href="{{ url_for('feed.starred') }}"><i class="icon-star"></i> Star</a></li>
-        <li class="menu-item"><a href="{{ url_for('feed.explore') }}"><i class="icon-th"></i> Explore</a></li>
+        <li class="menu-item"><a href="{{ url_for('feed.explore') }}"><i class="icon-th"></i> Trend</a></li>
         <br>
-        {% for feedName in exploreEntries %}
-        <li class="menu-item"><a href="#hero-{{exploreEntries.keys().index(feedName)}}"><i class="icon-forward"></i> {{feedName[:5]+'...'}}</a></li>
+        {% for feedName,entries in exploreEntries.iteritems() %}
+          {% for entry in entries.keys() %}
+          <li class="menu-item"><a href="#hero-{{exploreEntries.keys().index(feedName)}}-{{entries.keys().index(entry)}}"><i class="icon-forward"></i> {{entry.title[:5]+'...'}}</a></li>
+          {% endfor %}
         {% endfor %}
       </ul>
     </div>
@@ -65,39 +67,47 @@
 
   <!-- Entries Array -->
   <div id="entries_array" class="span8">
-    {% for feedName,entries in exploreEntries.iteritems() %}
-      <!-- 1st element is fan (user object)-->
-      {% for entry in entries[1:] %}
-      <div class="hero-unit" id="hero-{{exploreEntries.keys().index(feedName)}}">
-        <div class="media">
-          <div class="media-body">
-            <h4 class="headline">
-              <!-- Title -->
-              <a href="{{entry.link}}" target="_blank">{{entry.title}}</a>
-            </h4>
-            <!-- Author + Published date -->
-            <p>by {{entry.author}} at {{entry.published}}
-            <br>
-            starred by @{{entries[0].name}}</p>
-            <!-- Summary or Detail here -->
-  
-            <ul class="nav nav-tabs" id="contentSwitch">
-              <li class="active"><a href="#summary_{{exploreEntries.keys().index(feedName)}}_{{entries.index(entry)}}" data-toggle="tab">Summary</a></li>
-              <li><a href="#full_content_{{exploreEntries.keys().index(feedName)}}_{{entries.index(entry)}}" data-toggle="tab">Content</a></li>
-            </ul>
-         
-            <div class="tab-content">
-              <div class="tab-pane fade active in" id="summary_{{exploreEntries.keys().index(feedName)}}_{{entries.index(entry)}}">
-                {% include 'tmp/sum_'+entry.id[7:].replace('/','_') ignore missing %}
+    {% for order in ranking_order %}
+    
+      {% for feedName,entries in exploreEntries.iteritems() %}
+        <!-- -->
+        {% for entry in entries.keys() %}
+          {% if entries[entry]|length == order %}
+          <div class="hero-unit" id="hero-{{exploreEntries.keys().index(feedName)}}-{{entries.keys().index(entry)}}">
+            <div class="media">
+              <div class="media-body">
+                <h4 class="headline">
+                  <!-- Title -->
+                  <a href="{{entry.link}}" target="_blank">{{entry.title}}</a>
+                </h4>
+                <!-- Author + Published date -->
+                <p>by {{entry.author}} at {{entry.published}}
+                <br>
+                starred by 
+                {% for fan in entries[entry] %}
+                @{{fan.name}} &nbsp;
+                {% endfor %}</p>
+                <!-- Summary or Detail here -->
+      
+                <ul class="nav nav-tabs" id="contentSwitch">
+                  <li class="active"><a href="#summary_{{exploreEntries.keys().index(feedName)}}_{{entries.keys().index(entry)}}" data-toggle="tab">Summary</a></li>
+                  <li><a href="#full_content_{{exploreEntries.keys().index(feedName)}}_{{entries.keys().index(entry)}}" data-toggle="tab">Content</a></li>
+                </ul>
+             
+                <div class="tab-content">
+                  <div class="tab-pane fade active in" id="summary_{{exploreEntries.keys().index(feedName)}}_{{entries.keys().index(entry)}}">
+                    {% include 'tmp/sum_'+entry.id[7:].replace('/','_') ignore missing %}
+                  </div>
+                  <div class="tab-pane fade in" id="full_content_{{exploreEntries.keys().index(feedName)}}_{{entries.keys().index(entry)}}">
+                    {% include 'tmp/'+entry.id[7:].replace('/','_') ignore missing %}
+                  </div>
+                </div> 
+                  
               </div>
-              <div class="tab-pane fade in" id="full_content_{{exploreEntries.keys().index(feedName)}}_{{entries.index(entry)}}">
-                {% include 'tmp/'+entry.id[7:].replace('/','_') ignore missing %}
-              </div>
-            </div> 
-              
+            </div>
           </div>
-        </div>
-      </div>
+          {% endif %}
+        {% endfor %}
       {% endfor %}
     {% endfor %}
     <br>
