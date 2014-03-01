@@ -1,7 +1,7 @@
-  from flask import Blueprint, request, render_template, flash, g, session, redirect, url_for
+from flask import Blueprint, request, render_template, flash, g, session, redirect, url_for
 
 from app import db
-fr  om app.facebook.forms import RegisterForm
+from app.facebook.forms import RegisterForm
 from app.users.models import User
 from app.facebook.models import Facebook
 from app.users.decorators import requires_login

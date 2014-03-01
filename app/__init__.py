@@ -23,16 +23,16 @@ def portal():
   flash('Welcome to RSSR')
   return redirect(url_for('users.login'))
 
-from app.twitter.views import mod as twitterModule 
+from app.twitter.views import mod as twitterModule
 app.register_blueprint(twitterModule)
 
-from app.facebook.views import mod as facebookModule 
+from app.facebook.views import mod as facebookModule
 app.register_blueprint(facebookModule)
 
 from app.users.views import mod as usersModule
 app.register_blueprint(usersModule)
 
-from app.feed.views import mod as feedModule 
+from app.feed.views import mod as feedModule
 app.register_blueprint(feedModule)
 
 # Later on you'll import the other blueprints the same way:

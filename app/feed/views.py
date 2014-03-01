@@ -83,8 +83,8 @@ def detail(feedName = None):
   return render_template("feed/detail.html", form=form, entriesAry=entriesAry, starredAry = starredAry)
 
 
-@requires_login@
-mod.route('/home/', methods=['GET', 'POST'])
+@requires_login
+@mod.route('/home/', methods=['GET', 'POST'])
 def home():
   """
   Display the RSS Reader Home
