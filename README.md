@@ -77,3 +77,7 @@ Congratz! Open your browser at ```127.0.0.1:5000``` and test everything out!
 
 
 
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/DTVD/pyrssreader/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
